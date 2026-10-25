@@ -1,84 +1,86 @@
-# CYPHER-X
+# CYPHER-X — AI-Powered Cybersecurity System
 
-> **AI-assisted cybersecurity for threat detection, incident investigation, and defensive decision-making.**
+> **Detect suspicious activity. Investigate incidents. Understand potential impact. Make informed defensive decisions.**
 
-CYPHER-X is a planned cybersecurity platform designed to help users move beyond basic security alerts. It aims to identify suspicious activity, organize related events into an investigation timeline, assess potential impact across connected services, and recommend appropriate defensive actions.
+## 1. Project Description
 
-**Project status:** Initial project setup / under development. Features described below are planned capabilities and should not be considered implemented until built and tested.
+CYPHER-X is an AI-assisted cybersecurity system designed to detect suspicious activities, identify potential cyber threats, and help users investigate security incidents.
 
-## The Problem
+The planned platform brings three major capabilities together:
 
-Security alerts can be difficult to interpret. After suspicious activity is detected, users may still need to determine what happened, how an incident developed, which connected services could be affected, and what steps to take next. Investigating these questions manually can be time-consuming and challenging, especially for users without dedicated security teams.
+- **Personal Protection Space:** Monitor security alerts, account-protection guidance, and incident history.
+- **Attack Investigation System:** Organize evidence and event timelines to help analyze potential cyberattacks.
+- **Infrastructure Impact Analysis:** Estimate which connected services or components may be affected by a security incident.
 
-## Our Solution
+CYPHER-X also aims to explain why events were flagged and recommend appropriate defensive actions to improve security awareness and incident response.
 
-CYPHER-X aims to bring threat detection, incident investigation, infrastructure impact analysis, and defensive response guidance into one centralized interface. The goal is to make security events easier to understand and help users make better-informed decisions based on available evidence.
+**Project status:** Under development. The features and technologies in this README describe the intended design; they should not be considered implemented until they have been built and tested.
 
-## Key Features
+## 2. Key Features
 
-- **Threat Detection:** Identify potentially suspicious events using explainable security rules, with anomaly detection considered as a future enhancement.
-- **Personal Protection Dashboard:** Review security alerts, incidents, and risk information in one place.
-- **Attack Investigation:** Arrange related events into a timeline to help users understand the sequence of activity.
-- **Infrastructure Impact Analysis:** Use configured service relationships to identify components that may require further investigation.
-- **Security Alerts:** Present relevant information about suspicious activity and its potential severity.
-- **Defensive Response Recommendations:** Suggest next steps, with human review and approval for sensitive or disruptive actions.
-- **Access Control:** Protect application data and restrict access to authorized users.
+1. **AI-Assisted Threat Detection** — Identify suspicious patterns and prioritize potential threats using explainable detection rules, with anomaly analysis as a planned enhancement.
+2. **Personal Protection Space** — Provide a dashboard for security alerts, account-protection guidance, and incident history.
+3. **Attack Investigation System** — Organize evidence and event timelines to help users understand the sequence of suspicious activity.
+4. **Infrastructure Impact Analysis** — Estimate which connected services or components may be affected, based on configured relationships and available evidence.
+5. **Security Alerts and Notifications** — Highlight unusual activity and explain why an event was flagged.
+6. **Defensive Response Recommendations** — Suggest actions to investigate and reduce security risks. Sensitive or disruptive actions should require human review and approval.
+7. **Incident Monitoring Dashboard** — Present security events, incident status, and risk information in one interface.
+8. **Privacy and Access Control** — Aim to protect user data through authentication, authorization, and audit logging.
 
-## How It Works
+## 3. Proposed Technologies
 
-1. **Collect events** from configured sources such as application logs and authentication records.
-2. **Analyze activity** using security rules and, if added, anomaly-detection techniques.
-3. **Generate alerts** when events match suspicious patterns.
-4. **Investigate incidents** by organizing relevant events into a timeline.
-5. **Assess possible impact** using known relationships between connected services.
-6. **Recommend actions** to help users investigate and respond.
-7. **Review results** through a centralized dashboard.
-
-## Proposed Technology Stack
-
-| Component | Technology | Purpose |
+| Component | Technology | Intended Purpose |
 |---|---|---|
-| Frontend | React.js, TypeScript | Interactive web dashboard |
-| Styling | Tailwind CSS | Responsive user interface |
-| Backend | Java, Spring Boot | Application APIs and core workflows |
+| Programming Language | Java | Core application logic |
+| Backend Framework | Spring Boot | Backend services and REST APIs |
+| Frontend | React.js, TypeScript | Interactive security dashboard |
+| Database | PostgreSQL | Store events, alerts, incidents, and related records |
 | Application Security | Spring Security | Authentication and authorization |
-| Database | PostgreSQL | Store events, alerts, and incident records |
-| API Communication | REST APIs | Connect frontend and backend |
-| Real-Time Updates | WebSockets (planned) | Deliver live alerts and updates |
-| Detection | Java-based security rules | Explainable suspicious-activity detection |
-| Optional ML | Python, Scikit-learn | Experiment with anomaly detection |
-| Testing | JUnit, Mockito | Automated backend testing |
-| Version Control | Git, GitHub | Source-code management |
-| Packaging | Docker (planned) | Consistent development and deployment |
+| Real-Time Communication | WebSockets | Push live alerts and updates to the dashboard |
+| Threat Detection | Explainable, rule-based detection | Identify suspicious activity and explain detection reasons |
+| AI and Analytics | Anomaly analysis; potential machine-learning integration | Explore patterns that may not be covered by rules |
+| Testing | JUnit | Automated backend tests |
+| Optional Testing Tools | Mockito | Isolate dependencies in unit tests |
+| Version Control | Git, GitHub | Track and collaborate on source code |
 
-The stack is proposed and may evolve during implementation. The first version should prioritize a working backend, clear detection rules, reliable event storage, and a usable dashboard before adding machine learning or more complex infrastructure.
+**Technology note:** This is the proposed stack. The final technologies and integrations may change during implementation. WebSockets and machine-learning components must be treated as planned until implemented and validated.
 
-## Expected Impact
+## 4. How It Is Intended to Work
 
-CYPHER-X aims to:
-- Improve awareness of potentially suspicious activity.
-- Make incident investigation more organized and understandable.
-- Help users identify connected services that may need review.
-- Provide practical, evidence-informed defensive recommendations.
-- Support more consistent security decision-making for individuals, small businesses, and IT teams.
+1. **Collect security events** from configured and authorized sources, such as application logs or authentication records.
+2. **Analyze events** using explainable security rules and, if implemented, anomaly-analysis techniques.
+3. **Create alerts** when activity matches suspicious patterns, including an explanation of the reason for the alert.
+4. **Investigate incidents** by arranging related evidence and events into a timeline.
+5. **Estimate infrastructure impact** using known relationships between connected services and components.
+6. **Recommend defensive actions** that help users investigate and reduce risk.
+7. **Display the results** in the Personal Protection Space and incident monitoring dashboard.
+8. **Control access and record activity** through planned authentication, authorization, and audit logging.
 
-These are intended benefits. Detection quality, response time, and other outcomes will need to be evaluated through testing.
+## 5. Responsible Use
 
-## Responsible Use
+CYPHER-X is intended for defensive cybersecurity on systems the user owns or is authorized to monitor. A detection alert is an indicator for investigation, not automatic proof that a system has been compromised. Recommendations should be evidence-informed, and high-impact or disruptive response actions should require human review and approval.
 
-CYPHER-X is intended for defensive cybersecurity and authorized systems. Detection results should be treated as indicators for investigation, not automatic proof of compromise. High-impact actions should require human review and approval.
+## 6. Development Roadmap
 
-## Development Roadmap
+- [ ] Set up the Spring Boot backend and React/TypeScript frontend.
+- [ ] Design the PostgreSQL schema for events, alerts, incidents, and audit records.
+- [ ] Implement authorized sample-event ingestion and explainable rule-based detection.
+- [ ] Build the incident monitoring dashboard and alert details.
+- [ ] Implement the Personal Protection Space and incident history.
+- [ ] Add evidence organization and incident timelines.
+- [ ] Model service dependencies for infrastructure impact analysis.
+- [ ] Add defensive recommendations with appropriate human oversight.
+- [ ] Implement authentication, authorization, and audit logging.
+- [ ] Add JUnit tests and use Mockito where appropriate.
+- [ ] Evaluate anomaly analysis and whether machine learning adds measurable value.
+- [ ] Implement WebSocket-based real-time alerts and notifications.
+- [ ] Evaluate deployment and packaging options.
 
-- [ ] Set up the Spring Boot backend and React frontend.
-- [ ] Define the initial database schema for events, alerts, and incidents.
-- [ ] Implement sample-event ingestion and explainable detection rules.
-- [ ] Build the dashboard and alert details.
-- [ ] Add incident timelines and investigation workflows.
-- [ ] Model service dependencies for impact analysis.
-- [ ] Add authentication, authorization, and automated tests.
-- [ ] Evaluate whether an ML anomaly-detection service adds measurable value.
-- [ ] Add real-time updates and containerized deployment.
+## 7. Expected Outcomes
+
+CYPHER-X aims to make suspicious activity easier to understand, help users investigate incidents in a structured way, identify connected services that may need review, and support more consistent defensive decision-making.
+
+These are intended outcomes, not verified results. Detection quality, usability, and response improvements will need to be evaluated through testing.
 
 ## Project Goal
 
