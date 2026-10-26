@@ -65,7 +65,7 @@ export function CriticalityBadge({ criticality }: { criticality: Criticality }) 
     medium: "text-slate-300",
     low: "text-slate-400",
   };
-  return <span className={cn("font-mono text-[9px] uppercase tracking-wide", styles[criticality])}>{criticality}</span>;
+  return <span className={cn("font-mono text-[9px] uppercase tracking-wide", styles[criticality])}>{styles[criticality]}</span>;
 }
 
 const statusLabels: Record<AlertStatus, string> = {
@@ -109,6 +109,7 @@ export function MetricTile({
   icon,
   valueClass,
   noteClass,
+  className,
 }: {
   label: string;
   value: ReactNode;
@@ -116,9 +117,10 @@ export function MetricTile({
   icon?: string;
   valueClass?: string;
   noteClass?: string;
+  className?: string;
 }) {
   return (
-    <div className="flex flex-col rounded border border-outline/70 bg-surface-low p-2">
+    <div className={cn("flex flex-col rounded border border-outline/70 bg-surface-low p-2", className)}>
       <div className="flex items-center justify-between">
         <span className="font-mono text-[10px] text-slate-400">{label}</span>
         {icon && <MS name={icon} className="text-[14px] text-slate-400" />}

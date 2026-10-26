@@ -6,135 +6,240 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { DEFAULT_DETECTION_CONFIG, runDetections } from "@/data/detection";
-import { infrastructureGraph, nodeById } from "@/data/infrastructure";
+import { calculateBlastRadius, simulateIsolation } from "@/engine/blastRadius";
+import type {
+  InfrastructureGraph,
+  InfrastructureNode,
+  AttackPathResult,
+  IsolationComparisonResult,
+} from "@/types/infrastructure";
 import {
-  DEFAULT_INCIDENT_ID,
-  incidentById,
-  incidentForAlert,
-  incidents,
+  syntheticGraph,
+  getNodeById,
+  getNodeLabel,
+  type EnrichedNode,
+} from "@/data/infrastructure";
+import {
+  incidentScenarios,
+  getScenarioById,
+  DEFAULT_SCENARIO_ID,
+  type IncidentScenario,
 } from "@/data/incidents";
-import { analyze, simulateIsolation, type BlastResult, type ContainmentComparison } from "@/lib/blast-radius";
-import type { Alert, DetectionConfig, Incident, InfraNode } from "@/data/types";
+import { generateAIAnalysis, type AIAnalysisReport } from "@/engine/aiReasoning";
 
-const STORAGE_KEY = "cypherx.detection-config.v1";
+export interface SimulationHistoryRecord {
+  id: string;
+  timestamp: string;
+  scenarioId: string;
+  scenarioTitle: string;
+  sourceNodeId: string;
+  isolatedNodeId: string | null;
+  beforeReachableCount: number;
+  afterReachableCount: number;
+  mitigatedCount: number;
+  criticalMitigatedCount: number;
+  assumptions: readonly string[];
+}
+
+const HISTORY_STORAGE_KEY = "cypherx.simulation-history.v1";
+const SETTINGS_STORAGE_KEY = "cypherx.settings.v1";
+
+export interface AppSettings {
+  autoAIAnalysis: boolean;
+  highlightAttackPaths: boolean;
+  strictPropagationOnly: boolean;
+  maxPathsDisplayed: number;
+  soundAlerts: boolean;
+}
+
+const DEFAULT_SETTINGS: AppSettings = {
+  autoAIAnalysis: true,
+  highlightAttackPaths: true,
+  strictPropagationOnly: true,
+  maxPathsDisplayed: 20,
+  soundAlerts: false,
+};
 
 interface AppContextValue {
-  graph: typeof infrastructureGraph;
-  alerts: Alert[];
-  incidents: Incident[];
-  selectedIncident: Incident;
-  sourceNode: InfraNode;
-  /** Components isolated in the active simulation. */
+  graph: InfrastructureGraph;
+  scenarios: IncidentScenario[];
+  selectedScenario: IncidentScenario;
+  sourceNode: EnrichedNode;
   isolatedIds: string[];
-  /** Isolation state captured before the current simulation started. */
-  scenarioBaseline: string[];
-  hasSimulated: boolean;
   lastIsolatedId: string | null;
-  detectionConfig: DetectionConfig;
-  blastBefore: BlastResult;
-  /** Null until a containment has been simulated in the current scenario. */
-  blastAfter: BlastResult | null;
-  comparison: ContainmentComparison | null;
-  selectIncident: (id: string) => void;
-  isolateNode: (id: string) => void;
+  hasSimulated: boolean;
+
+  // Real Engine Outputs
+  blastBefore: AttackPathResult;
+  blastAfter: AttackPathResult | null;
+  comparison: IsolationComparisonResult | null;
+  aiReport: AIAnalysisReport;
+
+  // History & Settings
+  history: SimulationHistoryRecord[];
+  settings: AppSettings;
+
+  // Actions
+  selectScenario: (scenarioId: string) => void;
+  isolateNode: (nodeId: string) => void;
   resetScenario: () => void;
-  setDetectionConfig: (config: DetectionConfig) => void;
+  clearHistory: () => void;
+  updateSettings: (newSettings: Partial<AppSettings>) => void;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppStoreProvider({ children }: { children: ReactNode }) {
-  const [selectedIncidentId, setSelectedIncidentId] = useState(DEFAULT_INCIDENT_ID);
-  const [scenarioBaseline, setScenarioBaseline] = useState<string[]>([]);
+  const [selectedScenarioId, setSelectedScenarioId] = useState<string>(DEFAULT_SCENARIO_ID);
   const [isolatedIds, setIsolatedIds] = useState<string[]>([]);
-  const [hasSimulated, setHasSimulated] = useState(false);
   const [lastIsolatedId, setLastIsolatedId] = useState<string | null>(null);
-  const [detectionConfig, setDetectionConfigState] = useState<DetectionConfig>(DEFAULT_DETECTION_CONFIG);
+  const [hasSimulated, setHasSimulated] = useState<boolean>(false);
+  const [history, setHistory] = useState<SimulationHistoryRecord[]>([]);
+  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
 
-  // Restore saved detection settings after hydration (avoids SSR mismatch).
+  // Restore history and settings from browser storage on mount
   useEffect(() => {
     try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) setDetectionConfigState({ ...DEFAULT_DETECTION_CONFIG, ...JSON.parse(raw) });
+      const rawHistory = window.localStorage.getItem(HISTORY_STORAGE_KEY);
+      if (rawHistory) {
+        setHistory(JSON.parse(rawHistory));
+      }
+      const rawSettings = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
+      if (rawSettings) {
+        setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(rawSettings) });
+      }
     } catch {
-      // Ignore malformed local settings; defaults stay in effect.
+      // Storage unavailable or malformed; defaults stay
     }
   }, []);
 
-  const setDetectionConfig = (config: DetectionConfig) => {
-    setDetectionConfigState(config);
+  const selectedScenario = useMemo(() => getScenarioById(selectedScenarioId), [selectedScenarioId]);
+
+  const sourceNode = useMemo(
+    () => getNodeById(syntheticGraph, selectedScenario.sourceNodeId)!,
+    [selectedScenario.sourceNodeId],
+  );
+
+  // 1. Calculate baseline blast radius using Veadick's Engine
+  const blastBefore = useMemo(
+    () => calculateBlastRadius(syntheticGraph, selectedScenario.sourceNodeId),
+    [selectedScenario.sourceNodeId],
+  );
+
+  // 2. Calculate isolated blast radius & comparison using Veadick's Engine
+  const comparison = useMemo(() => {
+    if (!hasSimulated || !lastIsolatedId) return null;
+    return simulateIsolation(syntheticGraph, selectedScenario.sourceNodeId, lastIsolatedId);
+  }, [hasSimulated, lastIsolatedId, selectedScenario.sourceNodeId]);
+
+  const blastAfter = useMemo(() => (comparison ? comparison.after : null), [comparison]);
+
+  // 3. AI Security Reasoning
+  const aiReport = useMemo(
+    () => generateAIAnalysis(syntheticGraph, selectedScenario.sourceNodeId, blastBefore, comparison),
+    [selectedScenario.sourceNodeId, blastBefore, comparison],
+  );
+
+  // Action: Select Scenario
+  const selectScenario = (id: string) => {
+    setSelectedScenarioId(id);
+    setIsolatedIds([]);
+    setLastIsolatedId(null);
+    setHasSimulated(false);
+  };
+
+  // Action: Simulate Isolation
+  const isolateNode = (nodeId: string) => {
+    if (isolatedIds.includes(nodeId)) return;
+
+    const nextIsolated = [...isolatedIds, nodeId];
+    setIsolatedIds(nextIsolated);
+    setLastIsolatedId(nodeId);
+    setHasSimulated(true);
+
+    // Record into simulation history
+    const comp = simulateIsolation(syntheticGraph, selectedScenario.sourceNodeId, nodeId);
+    const beforeCount = comp.before.reachableNodeIds.length;
+    const afterCount = comp.after.reachableNodeIds.length;
+    const mitigated = beforeCount - afterCount;
+    const critMitigated = comp.before.criticalNodesReached.filter(
+      (c) => !comp.after.criticalNodesReached.includes(c),
+    ).length;
+
+    const newRecord: SimulationHistoryRecord = {
+      id: `SIM-${Date.now().toString(36).toUpperCase()}`,
+      timestamp: new Date().toISOString(),
+      scenarioId: selectedScenario.id,
+      scenarioTitle: selectedScenario.title,
+      sourceNodeId: selectedScenario.sourceNodeId,
+      isolatedNodeId: nodeId,
+      beforeReachableCount: beforeCount,
+      afterReachableCount: afterCount,
+      mitigatedCount: mitigated,
+      criticalMitigatedCount: critMitigated,
+      assumptions: comp.after.assumptions,
+    };
+
+    setHistory((prev) => {
+      const updated = [newRecord, ...prev].slice(0, 50);
+      try {
+        window.localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updated));
+      } catch {
+        // storage ignored
+      }
+      return updated;
+    });
+  };
+
+  // Action: Reset scenario
+  const resetScenario = () => {
+    setIsolatedIds([]);
+    setLastIsolatedId(null);
+    setHasSimulated(false);
+  };
+
+  // Action: Clear history
+  const clearHistory = () => {
+    setHistory([]);
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+      window.localStorage.removeItem(HISTORY_STORAGE_KEY);
     } catch {
-      // Storage may be unavailable; the in-memory config still applies.
+      // storage ignored
     }
   };
 
-  const alerts = useMemo(() => runDetections(undefined, detectionConfig), [detectionConfig]);
-
-  const selectedIncident =
-    incidentById(selectedIncidentId) ?? incidentById(DEFAULT_INCIDENT_ID)!;
-  const sourceNode = nodeById(selectedIncident.sourceNodeId)!;
-
-  const blastBefore = useMemo(
-    () => analyze(infrastructureGraph, selectedIncident.sourceNodeId, scenarioBaseline),
-    [selectedIncident.sourceNodeId, scenarioBaseline],
-  );
-
-  const blastAfter = useMemo(
-    () => (hasSimulated ? analyze(infrastructureGraph, selectedIncident.sourceNodeId, isolatedIds) : null),
-    [hasSimulated, selectedIncident.sourceNodeId, isolatedIds],
-  );
-
-  const comparison = useMemo(
-    () =>
-      hasSimulated && lastIsolatedId
-        ? simulateIsolation(infrastructureGraph, selectedIncident.sourceNodeId, lastIsolatedId, scenarioBaseline)
-        : null,
-    [hasSimulated, lastIsolatedId, selectedIncident.sourceNodeId, scenarioBaseline],
-  );
-
-  const selectIncident = (id: string) => {
-    setSelectedIncidentId(id);
-    setScenarioBaseline([]);
-    setIsolatedIds([]);
-    setHasSimulated(false);
-    setLastIsolatedId(null);
-  };
-
-  const isolateNode = (id: string) => {
-    if (isolatedIds.includes(id)) return;
-    if (!hasSimulated) setScenarioBaseline(isolatedIds.length > 0 ? isolatedIds : []);
-    setIsolatedIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
-    setHasSimulated(true);
-    setLastIsolatedId(id);
-  };
-
-  const resetScenario = () => {
-    setIsolatedIds(scenarioBaseline);
-    setHasSimulated(false);
-    setLastIsolatedId(null);
+  // Action: Update settings
+  const updateSettings = (newSettings: Partial<AppSettings>) => {
+    setSettings((prev) => {
+      const updated = { ...prev, ...newSettings };
+      try {
+        window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(updated));
+      } catch {
+        // storage ignored
+      }
+      return updated;
+    });
   };
 
   const value: AppContextValue = {
-    graph: infrastructureGraph,
-    alerts,
-    incidents,
-    selectedIncident,
+    graph: syntheticGraph,
+    scenarios: incidentScenarios,
+    selectedScenario,
     sourceNode,
     isolatedIds,
-    scenarioBaseline,
-    hasSimulated,
     lastIsolatedId,
-    detectionConfig,
+    hasSimulated,
     blastBefore,
     blastAfter,
     comparison,
-    selectIncident,
+    aiReport,
+    history,
+    settings,
+    selectScenario,
     isolateNode,
     resetScenario,
-    setDetectionConfig,
+    clearHistory,
+    updateSettings,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
@@ -144,16 +249,4 @@ export function useApp(): AppContextValue {
   const ctx = useContext(AppContext);
   if (!ctx) throw new Error("useApp must be used inside <AppStoreProvider>");
   return ctx;
-}
-
-/** Alert lookup helpers shared across pages. */
-export function useAlertLookup() {
-  const { alerts } = useApp();
-  return useMemo(() => {
-    const byId = new Map(alerts.map((a) => [a.id, a] as const));
-    return {
-      byId,
-      incidentFor: (alertId: string) => incidentForAlert(alertId),
-    };
-  }, [alerts]);
 }

@@ -5,23 +5,24 @@ export interface NavItem {
 }
 
 export const headerNav: NavItem[] = [
-  { to: "/", label: "Overview", icon: "" },
-  { to: "/security-alerts", label: "Security Alerts", icon: "" },
-  { to: "/investigations", label: "Investigations", icon: "" },
-  { to: "/infrastructure", label: "Infrastructure", icon: "" },
-  { to: "/containment", label: "Containment", icon: "" },
+  { to: "/", label: "Dashboard", icon: "dashboard" },
+  { to: "/infrastructure", label: "Infrastructure Map", icon: "hub" },
+  { to: "/investigations", label: "Scenarios", icon: "policy" },
+  { to: "/blast-radius", label: "Blast-Radius", icon: "polyline" },
+  { to: "/containment", label: "Containment", icon: "security" },
 ];
 
 export const telemetryNav: NavItem[] = [
   { to: "/", label: "Mission Control", icon: "dashboard" },
-  { to: "/security-alerts", label: "Active Triage", icon: "notifications_active" },
   { to: "/infrastructure", label: "Infrastructure Map", icon: "hub" },
-  { to: "/investigations", label: "Incident Cases", icon: "policy" },
-  { to: "/containment", label: "Adversary Emulation", icon: "terminal" },
+  { to: "/investigations", label: "Incident Scenarios", icon: "policy" },
+  { to: "/blast-radius", label: "Blast-Radius Analysis", icon: "polyline" },
+  { to: "/containment", label: "Isolation Simulation", icon: "security" },
 ];
 
 export const operationsNav: NavItem[] = [
-  { to: "/blast-radius", label: "Blast-Radius Analysis", icon: "polyline" },
-  { to: "/reports", label: "Investigation Reports", icon: "receipt_long" },
-  { to: "/settings", label: "Settings", icon: "tune" },
+  { to: "/security-alerts", label: "Security Alerts", icon: "notifications_active" },
+  { to: "/reports", label: "Impact Reports", icon: "receipt_long" },
+  { to: "/history", label: "Simulation History", icon: "history" },
+  { to: "/settings", label: "Settings & Info", icon: "tune" },
 ];

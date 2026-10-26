@@ -1,36 +1,37 @@
 import { useState, useRef, useMemo } from "react";
-import type { InfrastructureGraphData, InfraNode } from "@/data/types";
+import type { InfrastructureGraph, InfrastructureNode, DependencyEdge } from "@/types/infrastructure";
+import type { EnrichedNode } from "@/data/infrastructure";
 import { MS } from "@/components/shared";
 import { cn } from "@/lib/utils";
 
 interface GraphHighlight {
   sourceId: string;
-  reachableIds: string[];
-  isolatedIds: string[];
+  reachableIds: readonly string[];
+  isolatedIds: readonly string[];
   highlightEdges: Set<string>;
 }
 
 interface GraphPanelProps {
-  graph: InfrastructureGraphData;
+  graph: InfrastructureGraph;
   highlight: GraphHighlight;
   onSelectNode?: (id: string) => void;
   className?: string;
+  height?: number | string;
 }
 
-const NODE_WIDTH = 180;
-const NODE_HEIGHT = 68;
+const NODE_WIDTH = 190;
+const NODE_HEIGHT = 72;
 
-const componentIcons: Record<string, string> = {
-  workstation: "desktop_windows",
-  gateway: "router",
-  service: "dns",
-  server: "storage",
+const typeIcons: Record<string, string> = {
+  server: "dns",
+  application: "layers",
   database: "database",
-  storage: "cloud_sync",
-  monitoring: "monitoring",
+  workstation: "desktop_windows",
+  api: "cloud_sync",
+  account: "badge",
 };
 
-export function GraphPanel({ graph, highlight, onSelectNode, className }: GraphPanelProps) {
+export function GraphPanel({ graph, highlight, onSelectNode, className, height }: GraphPanelProps) {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -43,17 +44,15 @@ export function GraphPanel({ graph, highlight, onSelectNode, className }: GraphP
   const reachableSet = useMemo(() => new Set(reachableIds), [reachableIds]);
   const isolatedSet = useMemo(() => new Set(isolatedIds), [isolatedIds]);
 
-  // Map nodes by id for quick coordinate lookups
   const nodeMap = useMemo(() => {
-    const map = new Map<string, InfraNode>();
-    for (const node of graph.nodes) {
+    const map = new Map<string, EnrichedNode>();
+    for (const node of graph.nodes as EnrichedNode[]) {
       map.set(node.id, node);
     }
     return map;
   }, [graph.nodes]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    // Only drag with left click on background
     if (e.button !== 0) return;
     setIsDragging(true);
     setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
@@ -77,26 +76,26 @@ export function GraphPanel({ graph, highlight, onSelectNode, className }: GraphP
     <div
       ref={containerRef}
       className={cn("relative select-none overflow-hidden bg-[#090d18]", className)}
+      style={{ height: height ?? undefined, cursor: isDragging ? "grabbing" : "grab" }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
-      style={{ cursor: isDragging ? "grabbing" : "grab" }}
     >
       {/* Background Matrix Grid */}
       <svg className="pointer-events-none absolute inset-0 h-full w-full opacity-20">
         <defs>
-          <pattern id="grid-pattern" width="30" height="30" patternUnits="userSpaceOnUse">
-            <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#26334d" strokeWidth="0.8" />
-            <circle cx="0" cy="0" r="1" fill="#22d3ee" opacity="0.3" />
+          <pattern id="grid-pattern-cypher" width="32" height="32" patternUnits="userSpaceOnUse">
+            <path d="M 32 0 L 0 0 0 32" fill="none" stroke="#26334d" strokeWidth="0.8" />
+            <circle cx="0" cy="0" r="1" fill="#22d3ee" opacity="0.4" />
           </pattern>
         </defs>
-        <rect width="100%" height="100%" fill="url(#grid-pattern)" />
+        <rect width="100%" height="100%" fill="url(#grid-pattern-cypher)" />
       </svg>
 
-      {/* Interactive Canvas */}
+      {/* Interactive SVG Canvas */}
       <svg
-        viewBox="0 0 1140 540"
+        viewBox="0 0 1180 560"
         className="h-full w-full transition-transform duration-75"
         style={{
           transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
@@ -104,9 +103,8 @@ export function GraphPanel({ graph, highlight, onSelectNode, className }: GraphP
         }}
       >
         <defs>
-          {/* Arrow markers */}
           <marker
-            id="arrow-attack"
+            id="marker-attack"
             viewBox="0 0 10 10"
             refX="9"
             refY="5"
@@ -114,10 +112,10 @@ export function GraphPanel({ graph, highlight, onSelectNode, className }: GraphP
             markerHeight="6"
             orient="auto-start-reverse"
           >
-            <path d="M 0 1 L 10 5 L 0 9 z" fill="#f43f5e" />
+            <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#f43f5e" />
           </marker>
           <marker
-            id="arrow-standard"
+            id="marker-standard"
             viewBox="0 0 10 10"
             refX="9"
             refY="5"
@@ -125,10 +123,10 @@ export function GraphPanel({ graph, highlight, onSelectNode, className }: GraphP
             markerHeight="6"
             orient="auto-start-reverse"
           >
-            <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="#38bdf8" opacity="0.8" />
+            <path d="M 0 2 L 8 5 L 0 8 z" fill="#38bdf8" opacity="0.75" />
           </marker>
           <marker
-            id="arrow-context"
+            id="marker-blocked"
             viewBox="0 0 10 10"
             refX="9"
             refY="5"
@@ -136,12 +134,11 @@ export function GraphPanel({ graph, highlight, onSelectNode, className }: GraphP
             markerHeight="5"
             orient="auto-start-reverse"
           >
-            <path d="M 0 2 L 8 5 L 0 8 z" fill="#64748b" opacity="0.6" />
+            <path d="M 0 2 L 7 5 L 0 8 z" fill="#64748b" opacity="0.5" />
           </marker>
 
-          {/* Glow filter */}
-          <filter id="glow-rose" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="3" result="blur" />
+          <filter id="glow-rose-path" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="3.5" result="blur" />
             <feComposite in="SourceGraphic" in2="blur" operator="over" />
           </filter>
         </defs>
@@ -149,76 +146,72 @@ export function GraphPanel({ graph, highlight, onSelectNode, className }: GraphP
         {/* 1. EDGES */}
         <g className="edges-layer">
           {graph.edges.map((edge) => {
-            const fromNode = nodeMap.get(edge.from);
-            const toNode = nodeMap.get(edge.to);
+            const fromNode = nodeMap.get(edge.source);
+            const toNode = nodeMap.get(edge.target);
             if (!fromNode || !toNode) return null;
 
-            const edgeKey = `${edge.from}->${edge.to}`;
+            const edgeKey = `${edge.source}->${edge.target}`;
             const isAttackPath = highlightEdges.has(edgeKey);
-            const isIsolatedFrom = isolatedSet.has(edge.from);
-            const isIsolatedTo = isolatedSet.has(edge.to);
-            const isCut = isIsolatedFrom || isIsolatedTo;
+            const isSourceIsolated = isolatedSet.has(edge.source);
+            const isTargetIsolated = isolatedSet.has(edge.target);
+            const isCut = isSourceIsolated || isTargetIsolated;
 
-            // Compute connection points: center-right of source to center-left of target
             const x1 = fromNode.position.x + NODE_WIDTH;
             const y1 = fromNode.position.y + NODE_HEIGHT / 2;
             const x2 = toNode.position.x;
             const y2 = toNode.position.y + NODE_HEIGHT / 2;
 
-            // Curvature control points
-            const dx = Math.max(40, (x2 - x1) * 0.5);
+            const dx = Math.max(45, (x2 - x1) * 0.5);
             const pathD = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
 
             if (isAttackPath && !isCut) {
               return (
-                <g key={edge.id} className="edge-attack">
-                  {/* Glowing background path */}
+                <g key={`${edge.source}-${edge.target}`} className="edge-attack-active">
                   <path
                     d={pathD}
                     fill="none"
                     stroke="#f43f5e"
                     strokeWidth="4"
-                    opacity="0.4"
-                    filter="url(#glow-rose)"
+                    opacity="0.35"
+                    filter="url(#glow-rose-path)"
                   />
-                  {/* Active animated attack edge */}
                   <path
                     d={pathD}
                     fill="none"
                     stroke="#f43f5e"
                     strokeWidth="2.5"
-                    strokeDasharray="6 4"
+                    strokeDasharray="6 3"
                     className="animate-pulse"
-                    markerEnd="url(#arrow-attack)"
+                    markerEnd="url(#marker-attack)"
                   />
                 </g>
               );
             }
 
-            if (!edge.traversable || isCut) {
+            if (!edge.allowsPropagation || isCut) {
               return (
                 <path
-                  key={edge.id}
+                  key={`${edge.source}-${edge.target}`}
                   d={pathD}
                   fill="none"
-                  stroke={isCut ? "#e11d48" : "#475569"}
+                  stroke={isCut ? "#f43f5e" : "#475569"}
                   strokeWidth="1.2"
                   strokeDasharray="4 4"
-                  opacity={isCut ? 0.35 : 0.45}
-                  markerEnd="url(#arrow-context)"
+                  opacity={isCut ? 0.35 : 0.4}
+                  markerEnd="url(#marker-blocked)"
                 />
               );
             }
 
             return (
               <path
-                key={edge.id}
+                key={`${edge.source}-${edge.target}`}
                 d={pathD}
                 fill="none"
                 stroke="#334155"
-                strokeWidth="1.8"
+                strokeWidth="1.6"
                 opacity="0.75"
-                markerEnd="url(#arrow-standard)"
+                markerEnd="url(#marker-standard)"
                 className="hover:stroke-cyan-400"
               />
             );
@@ -227,7 +220,7 @@ export function GraphPanel({ graph, highlight, onSelectNode, className }: GraphP
 
         {/* 2. NODES */}
         <g className="nodes-layer">
-          {graph.nodes.map((node) => {
+          {(graph.nodes as EnrichedNode[]).map((node) => {
             const isSource = node.id === sourceId;
             const isReachable = reachableSet.has(node.id);
             const isIsolated = isolatedSet.has(node.id);
@@ -235,21 +228,19 @@ export function GraphPanel({ graph, highlight, onSelectNode, className }: GraphP
 
             let borderColor = "#26334d";
             let bgFill = "#161b2b";
-            let glow = false;
 
             if (isSource) {
               borderColor = "#f43f5e";
-              bgFill = "#24121a";
-              glow = true;
+              bgFill = "#26131c";
             } else if (isIsolated) {
-              borderColor = "#d97706";
+              borderColor = "#f59e0b";
               bgFill = "#1c1813";
             } else if (isReachable) {
-              borderColor = node.criticality === "critical" ? "#f43f5e" : "#fbbf24";
-              bgFill = node.criticality === "critical" ? "#20131b" : "#1c1a16";
+              borderColor = node.isCritical ? "#f43f5e" : "#fbbf24";
+              bgFill = node.isCritical ? "#22131e" : "#1e1b15";
             }
 
-            const iconName = componentIcons[node.componentType] ?? "dns";
+            const iconName = typeIcons[node.type] ?? "dns";
 
             return (
               <g
@@ -272,15 +263,14 @@ export function GraphPanel({ graph, highlight, onSelectNode, className }: GraphP
                   fill={bgFill}
                   stroke={borderColor}
                   strokeWidth={isSource ? 2.5 : isHovered ? 2 : 1.2}
-                  className="transition-colors"
                 />
 
-                {/* Source Ping Indicator */}
+                {/* Source Ping */}
                 {isSource && (
                   <circle
-                    cx="14"
-                    cy="14"
-                    r="8"
+                    cx="15"
+                    cy="15"
+                    r="9"
                     fill="none"
                     stroke="#f43f5e"
                     strokeWidth="1.5"
@@ -288,8 +278,8 @@ export function GraphPanel({ graph, highlight, onSelectNode, className }: GraphP
                   />
                 )}
 
-                {/* Node Header: Type Icon + Label */}
-                <foreignObject x="8" y="6" width={NODE_WIDTH - 16} height="26">
+                {/* Header foreignObject */}
+                <foreignObject x="8" y="7" width={NODE_WIDTH - 16} height="26">
                   <div className="flex items-center gap-1.5 overflow-hidden">
                     <span
                       className={cn(
@@ -307,7 +297,7 @@ export function GraphPanel({ graph, highlight, onSelectNode, className }: GraphP
                     </span>
                     <span
                       className={cn(
-                        "truncate font-mono text-[11px] font-semibold tracking-tight",
+                        "truncate font-mono text-[11px] font-semibold",
                         isSource ? "text-white" : isIsolated ? "text-amber-200 line-through" : "text-slate-100",
                       )}
                       title={node.label}
@@ -317,38 +307,36 @@ export function GraphPanel({ graph, highlight, onSelectNode, className }: GraphP
                   </div>
                 </foreignObject>
 
-                {/* Node Subtitle: IP & Zone */}
-                <foreignObject x="8" y="30" width={NODE_WIDTH - 16} height="16">
-                  <div className="flex items-center justify-between text-[9px] text-slate-400">
-                    <span className="font-mono">{node.ipAddress}</span>
+                {/* Subtitle foreignObject */}
+                <foreignObject x="8" y="32" width={NODE_WIDTH - 16} height="16">
+                  <div className="flex items-center justify-between text-[9px] text-slate-400 font-mono">
+                    <span>{node.ipAddress}</span>
                     <span className="truncate opacity-80">{node.zone}</span>
                   </div>
                 </foreignObject>
 
-                {/* Node Footer: Badges */}
-                <foreignObject x="8" y="47" width={NODE_WIDTH - 16} height="16">
-                  <div className="flex items-center justify-between">
+                {/* Badges foreignObject */}
+                <foreignObject x="8" y="50" width={NODE_WIDTH - 16} height="16">
+                  <div className="flex items-center justify-between font-mono text-[8px]">
                     <span
                       className={cn(
-                        "rounded px-1 py-0.2 font-mono text-[8px] font-bold uppercase",
-                        node.criticality === "critical"
+                        "rounded px-1 py-0.2 font-bold uppercase",
+                        node.isCritical
                           ? "bg-rose-950 text-rose-300 border border-rose-500/40"
-                          : node.criticality === "high"
-                            ? "bg-amber-950 text-amber-300 border border-amber-500/40"
-                            : "bg-surface-lowest text-slate-400 border border-outline",
+                          : "bg-surface-lowest text-slate-400 border border-outline",
                       )}
                     >
-                      {node.criticality}
+                      {node.isCritical ? "CRITICAL" : node.type}
                     </span>
-                    <span className="flex items-center gap-1 font-mono text-[8px] text-slate-400">
+                    <span className="flex items-center gap-1 text-slate-300">
                       {isSource ? (
-                        <span className="text-rose-400 font-semibold">SOURCE</span>
+                        <span className="text-rose-400 font-bold">SOURCE</span>
                       ) : isIsolated ? (
-                        <span className="text-amber-400 font-semibold">ISOLATED</span>
+                        <span className="text-amber-400 font-bold">ISOLATED</span>
                       ) : isReachable ? (
-                        <span className="text-rose-300">EXPOSED</span>
+                        <span className="text-rose-300 font-medium">REACHABLE</span>
                       ) : (
-                        <span>{node.status}</span>
+                        <span className="text-teal-400">NOMINAL</span>
                       )}
                       <span
                         className={cn(
@@ -359,9 +347,7 @@ export function GraphPanel({ graph, highlight, onSelectNode, className }: GraphP
                               ? "bg-amber-400"
                               : isReachable
                                 ? "bg-rose-500"
-                                : node.status === "healthy"
-                                  ? "bg-teal-400"
-                                  : "bg-amber-400",
+                                : "bg-teal-400",
                         )}
                       />
                     </span>
@@ -374,7 +360,7 @@ export function GraphPanel({ graph, highlight, onSelectNode, className }: GraphP
       </svg>
 
       {/* Floating Canvas Controls */}
-      <div className="absolute bottom-2 right-2 flex items-center gap-1 rounded-md border border-outline bg-surface-low/90 p-1 shadow-md backdrop-blur-sm">
+      <div className="absolute bottom-2 right-2 flex items-center gap-1 rounded border border-outline bg-surface-low/90 p-1 shadow-md backdrop-blur-sm">
         <button
           onClick={() => setZoom((z) => Math.min(z + 0.15, 2))}
           className="rounded p-1 text-slate-400 hover:bg-surface-hover hover:text-white"
@@ -398,22 +384,21 @@ export function GraphPanel({ graph, highlight, onSelectNode, className }: GraphP
         </button>
       </div>
 
-      {/* Top Legend */}
+      {/* Legend Badge */}
       <div className="absolute left-2 top-2 flex flex-wrap items-center gap-2 rounded border border-outline bg-surface-lowest/90 px-2 py-1 font-mono text-[10px] text-slate-400 backdrop-blur-sm">
         <span className="flex items-center gap-1">
-          <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" /> Incident Origin
+          <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" /> Incident Source
         </span>
         <span className="flex items-center gap-1">
-          <span className="h-0.5 w-3 bg-rose-500" /> Attack Vector
+          <span className="h-0.5 w-3 bg-rose-500" /> Modeled Attack Vector
         </span>
         <span className="flex items-center gap-1">
-          <span className="h-0.5 w-3 bg-slate-600" /> Traversable Link
+          <span className="h-0.5 w-3 bg-slate-600" /> Propagation Allowed
         </span>
         <span className="flex items-center gap-1">
-          <span className="h-2 w-2 rounded-full border border-amber-400 bg-amber-950" /> Isolated
+          <span className="h-2 w-2 rounded-full border border-amber-400 bg-amber-950" /> Quarantined
         </span>
       </div>
     </div>
   );
 }
-
