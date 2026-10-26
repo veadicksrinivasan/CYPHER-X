@@ -27,6 +27,8 @@ function ContainmentPage() {
   } = useApp();
 
   const [targetId, setTargetId] = useState<string>("vpn-gw-01");
+  const [showAttackerIp, setShowAttackerIp] = useState<boolean>(false);
+  const [copiedIp, setCopiedIp] = useState<boolean>(false);
 
   const beforeCount = blastBefore.reachableNodeIds.length;
   const afterCount = blastAfter ? blastAfter.reachableNodeIds.length : beforeCount;
@@ -129,9 +131,9 @@ function ContainmentPage() {
       </section>
 
       {/* Main Grid: Containment Graph + Before-and-After Analysis */}
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
+      <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-12">
         {/* Topology Graph Showing Cut Links */}
-        <div className="flex flex-col rounded-lg border border-outline bg-surface p-3 shadow-sm lg:col-span-7">
+        <div className="flex flex-col rounded-lg border border-outline bg-surface p-3.5 shadow-sm lg:col-span-6 xl:col-span-6">
           <div className="mb-2 flex items-center justify-between border-b border-outline pb-2">
             <div>
               <h2 className="text-[14px] font-bold text-white">Containment Topology Verification</h2>
@@ -160,13 +162,18 @@ function ContainmentPage() {
           />
         </div>
 
-        {/* Detailed Comparison Panel */}
-        <div className="flex flex-col gap-3 rounded-lg border border-outline bg-surface p-3 shadow-sm lg:col-span-5">
-          <div className="border-b border-outline pb-2">
-            <h2 className="text-[14px] font-bold text-white">Before vs. After Containment Breakdown</h2>
-            <p className="text-[11px] text-slate-400">
-              Deterministic comparison generated strictly by BFS graph re-traversal.
-            </p>
+        {/* Detailed Comparison Panel - Expanded Width to Prevent Cramped Layout */}
+        <div className="flex flex-col gap-3 rounded-lg border border-outline bg-surface p-4 shadow-sm lg:col-span-6 xl:col-span-6">
+          <div className="border-b border-outline pb-2 flex items-center justify-between">
+            <div>
+              <h2 className="text-[14px] font-bold text-white">Before vs. After Containment Breakdown</h2>
+              <p className="text-[11px] text-slate-400">
+                Deterministic comparison generated strictly by BFS graph re-traversal.
+              </p>
+            </div>
+            <span className="rounded bg-surface-low border border-outline px-2 py-0.5 font-mono text-[10px] text-cyan-300 font-semibold">
+              SCENARIO: {selectedScenario.scenarioCode}
+            </span>
           </div>
 
           {/* Components Mitigated */}
@@ -176,12 +183,12 @@ function ContainmentPage() {
                 Components Successfully Safeguarded ({mitigatedNodes.length})
               </span>
             </div>
-            <div className="flex flex-wrap gap-1 max-h-28 overflow-y-auto rounded border border-outline bg-surface-lowest p-2">
+            <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto rounded border border-outline bg-surface-lowest p-2.5">
               {mitigatedNodes.length > 0 ? (
                 mitigatedNodes.map((id) => (
                   <span
                     key={id}
-                    className="rounded bg-teal-950/80 border border-teal-500/40 px-2 py-0.5 font-mono text-[10px] text-teal-300 font-semibold"
+                    className="rounded bg-teal-950/80 border border-teal-500/40 px-2.5 py-1 font-mono text-[10px] text-teal-300 font-semibold"
                   >
                     ✓ {getNodeLabel(id)}
                   </span>
@@ -203,12 +210,12 @@ function ContainmentPage() {
                 Components Still Exposed ({remainingNodes.length})
               </span>
             </div>
-            <div className="flex flex-wrap gap-1 max-h-28 overflow-y-auto rounded border border-outline bg-surface-lowest p-2">
+            <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto rounded border border-outline bg-surface-lowest p-2.5">
               {remainingNodes.length > 0 ? (
                 remainingNodes.map((id) => (
                   <span
                     key={id}
-                    className="rounded bg-rose-950/80 border border-rose-500/40 px-2 py-0.5 font-mono text-[10px] text-rose-300 font-semibold"
+                    className="rounded bg-rose-950/80 border border-rose-500/40 px-2.5 py-1 font-mono text-[10px] text-rose-300 font-semibold"
                   >
                     ! {getNodeLabel(id)}
                   </span>
@@ -226,10 +233,10 @@ function ContainmentPage() {
             <span className="font-mono text-[11px] font-bold uppercase text-slate-400">
               Active Attack Trajectories ({activePaths.length})
             </span>
-            <div className="flex flex-col gap-1 max-h-32 overflow-y-auto rounded border border-outline bg-surface-lowest p-2 font-mono text-[10px]">
+            <div className="flex flex-col gap-1.5 max-h-32 overflow-y-auto rounded border border-outline bg-surface-lowest p-2.5 font-mono text-[10px]">
               {activePaths.slice(0, 6).map((path, idx) => (
-                <div key={idx} className="text-slate-300 truncate">
-                  <span className="text-rose-400 font-bold">P{idx + 1}:</span> {path.nodeIds.map(getNodeLabel).join(" -> ")}
+                <div key={idx} className="text-slate-300 truncate hover:text-white">
+                  <span className="text-rose-400 font-bold">P{idx + 1}:</span> {path.nodeIds.map(getNodeLabel).join(" → ")}
                 </div>
               ))}
               {activePaths.length > 6 && (
@@ -241,22 +248,94 @@ function ContainmentPage() {
             </div>
           </div>
 
-          {/* Export Triage Report Button */}
-          <div className="mt-auto border-t border-outline pt-2 flex items-center justify-between">
-            <button
-              onClick={() => navigate({ to: "/reports" })}
-              className="flex items-center gap-1 font-mono text-[11px] text-cyan-400 hover:underline"
-            >
-              <MS name="receipt_long" className="text-[16px]" />
-              Generate Audit Report
-            </button>
-            <button
-              onClick={() => navigate({ to: "/history" })}
-              className="flex items-center gap-1 font-mono text-[11px] text-slate-400 hover:underline"
-            >
-              <MS name="history" className="text-[16px]" />
-              View Simulation Log
-            </button>
+          {/* Right Bottom Footer with Attacker IP Display and Action Controls */}
+          <div className="mt-auto border-t border-outline pt-3 flex flex-col gap-2.5">
+            {/* Attacker IP Card (Toggled by user action button) */}
+            {showAttackerIp && (
+              <div className="rounded-md border border-rose-500/50 bg-rose-950/40 p-3 shadow-lg">
+                <div className="flex items-center justify-between border-b border-rose-500/30 pb-1.5 mb-2">
+                  <div className="flex items-center gap-1.5 text-rose-300 font-bold font-mono text-[11px]">
+                    <MS name="radar" className="text-[16px] text-rose-400" />
+                    <span>ADVERSARY THREAT INTEL • ATTACKER IP</span>
+                  </div>
+                  <button
+                    onClick={() => setShowAttackerIp(false)}
+                    className="text-slate-400 hover:text-white text-[12px] px-1"
+                    title="Close card"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded bg-surface-lowest p-2 border border-rose-500/30 font-mono">
+                  <div>
+                    <div className="text-[9px] uppercase tracking-wider text-slate-400">Origin Attacker IP / Port:</div>
+                    <div className="text-[14px] font-bold text-rose-400 flex items-center gap-1">
+                      <span>{selectedScenario.attackerIp || "198.51.100.44"}</span>
+                      {selectedScenario.attackerPort && (
+                        <span className="text-rose-300 text-[11px]">:{selectedScenario.attackerPort}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(selectedScenario.attackerIp || "198.51.100.44");
+                      setCopiedIp(true);
+                      setTimeout(() => setCopiedIp(false), 2000);
+                    }}
+                    className="flex items-center justify-center gap-1 rounded bg-rose-950 border border-rose-500/60 px-2.5 py-1 text-[10px] text-rose-200 hover:bg-rose-900 transition-colors shrink-0"
+                  >
+                    <MS name={copiedIp ? "check" : "content_copy"} className="text-[13px]" />
+                    {copiedIp ? "Copied!" : "Copy IP"}
+                  </button>
+                </div>
+
+                <div className="mt-2 grid grid-cols-2 gap-2 text-[10px] font-mono text-slate-300">
+                  <div>
+                    <span className="text-slate-400">Geolocation:</span>{" "}
+                    <strong className="text-slate-200">{selectedScenario.attackerLocation || "External C2"}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Target Ingress:</span>{" "}
+                    <strong className="text-cyan-300">{sourceNode.ipAddress}</strong>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Bottom Button Row */}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <button
+                onClick={() => setShowAttackerIp((prev) => !prev)}
+                className={cn(
+                  "flex items-center gap-1.5 rounded px-3 py-1.5 font-mono text-[11px] font-bold transition-all shadow-sm",
+                  showAttackerIp
+                    ? "border border-rose-500 bg-rose-600 text-white shadow-rose-950/60"
+                    : "border border-rose-500/50 bg-rose-950/60 text-rose-300 hover:bg-rose-900/80 hover:text-white",
+                )}
+              >
+                <MS name="radar" className="text-[16px]" />
+                {showAttackerIp ? "Hide Attacker IP" : "Display Attacker IP"}
+              </button>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => navigate({ to: "/reports" })}
+                  className="flex items-center gap-1 font-mono text-[11px] text-cyan-400 hover:underline"
+                >
+                  <MS name="receipt_long" className="text-[16px]" />
+                  Generate Audit Report
+                </button>
+                <button
+                  onClick={() => navigate({ to: "/history" })}
+                  className="flex items-center gap-1 font-mono text-[11px] text-slate-400 hover:underline"
+                >
+                  <MS name="history" className="text-[16px]" />
+                  View Simulation Log
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -7,6 +7,9 @@ export interface IncidentScenario {
   status: "active" | "under-review" | "containment-staged" | "contained";
   summary: string;
   adversaryTTP: string;
+  attackerIp: string;
+  attackerLocation?: string;
+  attackerPort?: number;
   timeline: Array<{
     time: string;
     tag: string;
@@ -26,6 +29,9 @@ export const incidentScenarios: IncidentScenario[] = [
     summary:
       "Public-facing web server compromised via reverse-shell vulnerability. Ingress traversal attempting pivot through Remote Access Gateway.",
     adversaryTTP: "T1190 (Exploit Public-Facing Application) -> T1021 (Remote Services)",
+    attackerIp: "198.51.100.44",
+    attackerLocation: "External Adversary C2 (Frankfurt, DE)",
+    attackerPort: 4444,
     timeline: [
       { time: "10:14 UTC", tag: "INGRESS", tone: "rose", text: "Anomalous outbound socket spawned on Web Server (srv-web-01) port 4444." },
       { time: "10:18 UTC", tag: "LATERAL", tone: "amber", text: "Session establishes authenticated traversal towards Remote Access Gateway (vpn-gw-01)." },
@@ -43,6 +49,9 @@ export const incidentScenarios: IncidentScenario[] = [
     summary:
       "Privileged workstation compromised via spear-phishing credential theft. Active Kerberos tickets targeting Identity and API tiers.",
     adversaryTTP: "T1566 (Phishing) -> T1558 (Steal or Forge Kerberos Tickets)",
+    attackerIp: "198.51.100.187",
+    attackerLocation: "External Phishing Operator (St. Petersburg, RU)",
+    attackerPort: 8443,
     timeline: [
       { time: "09:40 UTC", tag: "CORAL", tone: "rose", text: "Burst of 7 failed logins against admin account followed by abnormal success." },
       { time: "09:44 UTC", tag: "AMBER", tone: "amber", text: "Ticket Granting Service (TGS) request issued targeting auth-svc and srv-api-prod-01." },
@@ -60,6 +69,9 @@ export const incidentScenarios: IncidentScenario[] = [
     summary:
       "Core API server token-replay anomaly observed. Attacker executing privileged data queries against Claims Database.",
     adversaryTTP: "T1550 (Use Alternate Authentication Material) -> T1005 (Data from Local System)",
+    attackerIp: "203.0.113.72",
+    attackerLocation: "External Tor Exit Node / API Replay (Ashburn, US)",
+    attackerPort: 443,
     timeline: [
       { time: "10:38 UTC", tag: "REPLAY", tone: "rose", text: "Stolen JWT administrative token replayed from unauthorized secondary IP address." },
       { time: "10:41 UTC", tag: "SURGE", tone: "amber", text: "High-volume SELECT queries issued across claims.policies table (12,480 records)." },
