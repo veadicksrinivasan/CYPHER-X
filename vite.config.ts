@@ -1,17 +1,18 @@
-import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vitest/config'
+import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
+import path from 'node:path'
 
-// https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [tailwindcss(), react()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
   test: {
-    // Engine tests run in a plain Node environment — no DOM required.
     environment: 'node',
-    // Surface all console output so test failures are easy to diagnose.
-    reporter: 'verbose',
-    // Explicitly include the test file pattern (Vitest default, shown here
-    // for documentation clarity).
+    reporters: ['verbose'],
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
   },
 })
-

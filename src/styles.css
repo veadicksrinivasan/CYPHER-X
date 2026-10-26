@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0e1323;
+  --foreground: #f1f5f9;
+  --surface: #161b2b;
+  --surface-low: #131a2c;
+  --surface-lowest: #090d18;
+  --surface-hover: #1a2236;
+  --surface-hover-strong: #1f293d;
+  --surface-active: #1a2338;
+  --surface-raised: #202b40;
+  --surface-strong: #283650;
+  --surface-meter: #1e283d;
+  --outline: #26334d;
+  --muted-foreground: #94a3b8;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-surface: var(--surface);
+  --color-surface-low: var(--surface-low);
+  --color-surface-lowest: var(--surface-lowest);
+  --color-hover: var(--surface-hover);
+  --color-hover-strong: var(--surface-hover-strong);
+  --color-active: var(--surface-active);
+  --color-raised: var(--surface-raised);
+  --color-strong: var(--surface-strong);
+  --color-meter: var(--surface-meter);
+  --color-outline: var(--outline);
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+* {
+  border-color: var(--outline);
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 18px;
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--surface-lowest);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--outline);
+  border-radius: 3px;
+}
+
+::selection {
+  background: rgba(34, 211, 238, 0.3);
+  color: #67e8f9;
+}
+
