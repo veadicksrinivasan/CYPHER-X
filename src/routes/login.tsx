@@ -10,7 +10,7 @@ export function Login() {
   const navigate = useNavigate();
   const { loginUser } = useApp();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!email) return;
     loginUser(email.trim());

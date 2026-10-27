@@ -52,8 +52,6 @@ export interface AppSettings {
   soundAlerts: boolean;
 }
 
-
-
 /*** Personal Vault Types ***/
 export interface UserProfile {
   name: string;
@@ -68,7 +66,7 @@ export interface Device {
 }
 export interface VaultAlert {
   id: string;
-  severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  severity: "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
   title: string;
   asset: string;
   timestamp: string;
@@ -81,11 +79,9 @@ export interface ActivityLog {
   timestamp: string;
 }
 export interface VaultSettings {
-  theme: 'dark' | 'light';
+  theme: "dark" | "light";
   emailNotifications: boolean;
 }
-
-
 
 const DEFAULT_SETTINGS: AppSettings = {
   autoAIAnalysis: true,
@@ -150,8 +146,6 @@ interface AppContextValue {
   updateVaultSettings: (userId: string, newSettings: Partial<VaultSettings>) => void;
   exportVaultData: (userId: string) => void;
   deleteAccount: (userId: string) => void;
-
-
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -172,24 +166,18 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const [logMap, setLogMap] = useState<Record<string, ActivityLog[]>>({});
   const [settingsMap, setVaultSettingsMap] = useState<Record<string, VaultSettings>>({});
 
-
   // Restore history and settings from browser storage on mount
   useEffect(() => {
-  try {
-    const rawHistory = window.localStorage.getItem(HISTORY_STORAGE_KEY);
-    if (rawHistory) {
-      setHistory(JSON.parse(rawHistory));
-    }
+    try {
+      const rawHistory = window.localStorage.getItem(HISTORY_STORAGE_KEY);
+      if (rawHistory) setHistory(JSON.parse(rawHistory));
 
-    const rawSettings = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
-    if (rawSettings) {
-      setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(rawSettings) });
+      const rawSettings = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
+      if (rawSettings) setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(rawSettings) });
+    } catch {
+      // ignore storage errors
     }
-  } catch {
-    // Storage unavailable or malformed; defaults stay.
-  }
-}, []);
-
+  }, []);
 
   const selectedScenario = useMemo(() => getScenarioById(selectedScenarioId), [selectedScenarioId]);
 
@@ -198,13 +186,13 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     [graph, selectedScenario.sourceNodeId],
   );
 
-  // 1. Calculate baseline blast radius using Veadick's Engine
+  // 1. Calculate baseline blast radius
   const blastBefore = useMemo(
     () => calculateBlastRadius(graph, selectedScenario.sourceNodeId),
     [graph, selectedScenario.sourceNodeId],
   );
 
-  // 2. Calculate isolated blast radius & comparison using Veadick's Engine
+  // 2. Calculate isolated blast radius & comparison
   const comparison = useMemo(() => {
     if (!hasSimulated || !lastIsolatedId) return null;
     return simulateIsolation(graph, selectedScenario.sourceNodeId, lastIsolatedId);
@@ -232,17 +220,18 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     let hostname = "server-node";
     let port = "443";
     try {
-      const parsed = new URL(rawUrl.startsWith("http://") || rawUrl.startsWith("https://") ? rawUrl : `https://${rawUrl}`);
+      const parsed = new URL(
+        rawUrl.startsWith("http://") || rawUrl.startsWith("https://") ? rawUrl : `https://${rawUrl}`
+      );
       hostname = parsed.hostname || "custom-server";
       port = parsed.port || (parsed.protocol === "http:" ? "80" : "443");
     } catch {
       hostname = rawUrl.replace(/[^a-zA-Z0-9.-]/g, "").slice(0, 30) || "custom-server";
-  
+    }
     const cleanId = `srv-${hostname.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase().slice(0, 16)}-${Math.floor(Math.random() * 900 + 100)}`;
     const isIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname);
     const assignedIp = isIp ? hostname : `10.0.1.${Math.floor(Math.random() * 150 + 40)}`;
 
-    // Calculate Y position on the left side of map (x=30)
     const existingLeftNodes = (graph.nodes as EnrichedNode[]).filter((n) => n.position && n.position.x <= 80);
     const nextY = 20 + existingLeftNodes.length * 85;
 
@@ -288,13 +277,11 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   // Action: Simulate Isolation
   const isolateNode = (nodeId: string) => {
     if (isolatedIds.includes(nodeId)) return;
-
     const nextIsolated = [...isolatedIds, nodeId];
     setIsolatedIds(nextIsolated);
     setLastIsolatedId(nodeId);
     setHasSimulated(true);
 
-    // Record into simulation history
     const comp = simulateIsolation(graph, selectedScenario.sourceNodeId, nodeId);
     const beforeCount = comp.before.reachableNodeIds.length;
     const afterCount = comp.after.reachableNodeIds.length;
@@ -322,7 +309,7 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       try {
         window.localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(updated));
       } catch {
-        // storage ignored
+        // ignore storage errors
       }
       return updated;
     });
@@ -341,18 +328,17 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     try {
       window.localStorage.removeItem(HISTORY_STORAGE_KEY);
     } catch {
-      // storage ignored
-    };
+      // ignore
+    }
+  };
 
   // Helper to compute storage key for a user
   const vaultKey = (userId: string, suffix: string) => `vault:${userId}:${suffix}`;
 
   // Action: Login (email only)
   const loginUser = (email: string) => {
-    // Simple deterministic id – base64 of email without padding
-    const userId = btoa(email).replace(/=+$/g, '');
+    const userId = btoa(email).replace(/=+$/g, "");
     sessionStorage.setItem('cypherx.userId', userId);
-    // Load or init per‑user data
     try {
       const p = localStorage.getItem(vaultKey(userId, 'profile'));
       if (p) setProfileMap((prev) => ({ ...prev, [userId]: JSON.parse(p) }));
@@ -396,7 +382,6 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       try { localStorage.setItem(vaultKey(userId, 'devices'), JSON.stringify(list)); } catch {}
       return { ...prev, [userId]: list };
     });
-    // Log activity
     addActivity(userId, { id: `ACT-${Date.now()}`, action: `Added device ${device.name}`, timestamp: new Date().toISOString() });
   };
 
@@ -457,19 +442,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     setTimeout(() => URL.revokeObjectURL(url), 5000);
   };
 
-  // Compute current user ID and expose per‑user slices
-  const currentUserId = sessionStorage.getItem('cypherx.userId');
-  const profile = currentUserId ? profileMap[currentUserId] ?? null : null;
-  const devices = currentUserId ? deviceMap[currentUserId] ?? [] : [];
-  const alerts = currentUserId ? alertMap[currentUserId] ?? [] : [];
-  const activityLogs = currentUserId ? logMap[currentUserId] ?? [] : [];
-  const vaultSettings = currentUserId ? settingsMap[currentUserId] ?? { theme: 'dark', emailNotifications: false } : { theme: 'dark', emailNotifications: false };
-
+  // Action: Delete account
   const deleteAccount = (userId: string) => {
     const prefixes = ['profile', 'devices', 'alerts', 'logs', 'settings'];
-    prefixes.forEach((s) => {
-      try { localStorage.removeItem(vaultKey(userId, s)); } catch {}
-    });
+    prefixes.forEach((s) => { try { localStorage.removeItem(vaultKey(userId, s)); } catch {} });
     setProfileMap((prev) => {
       const { [userId]: _, ...rest } = prev;
       return rest;
@@ -493,14 +469,20 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     logoutUser();
   };
 
+  // Compute current user ID and expose per‑user slices
+  const currentUserId = sessionStorage.getItem('cypherx.userId');
+  const profile = currentUserId ? profileMap[currentUserId] ?? null : null;
+  const devices = currentUserId ? deviceMap[currentUserId] ?? [] : [];
+  const alerts = currentUserId ? alertMap[currentUserId] ?? [] : [];
+  const activityLogs = currentUserId ? logMap[currentUserId] ?? [] : [];
+  const vaultSettings = currentUserId ? settingsMap[currentUserId] ?? { theme: 'dark', emailNotifications: false } : { theme: 'dark', emailNotifications: false };
+
+  // Action: Update Settings (App Settings)
   const updateSettings = (newSettings: Partial<AppSettings>) => {
     setSettings((prev) => {
       const updated = { ...prev, ...newSettings };
-      try {
-        window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(updated));
-      } catch {
-        // storage ignored
-          return updated;
+      try { window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(updated)); } catch {}
+      return updated;
     });
   };
 
@@ -518,14 +500,12 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     aiReport,
     history,
     settings,
-    // Vault state
     currentUserId,
     profile,
     devices,
     alerts,
     activityLogs,
     vaultSettings,
-    // Actions
     selectScenario,
     isolateNode,
     resetScenario,
@@ -533,7 +513,6 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     updateSettings,
     connectServerByUrl,
     resetGraph,
-    // Vault actions
     loginUser,
     logoutUser,
     updateProfile,
@@ -545,7 +524,6 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     exportVaultData,
     deleteAccount,
   };
-
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }
